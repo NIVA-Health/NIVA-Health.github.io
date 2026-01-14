@@ -1,0 +1,919 @@
+s<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Monthly ROI Allocation (90-Day Campaign Window)</title>
+  <meta name="description" content="A modern, fun, professional explainer + calculator for allocating a 90-day campaign bundle into monthly ROI using day-weighted allocation." />
+
+  <!-- MathJax for LaTeX ($$ ... $$) -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+      options: { renderActions: { addMenu: [] } }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+  <style>
+    :root{
+      --bg0:#0b1220;
+      --bg1:#0f1b33;
+      --card: rgba(12, 22, 44, .58);
+      --card2: rgba(0,0,0,.16);
+      --text:#eaf0ff;
+      --muted:#b8c4e6;
+      --muted2:#94a3c7;
+      --accent:#7c5cff;
+      --accent2:#22c55e;
+      --accent3:#ff5c93;
+      --line: rgba(255,255,255,.10);
+      --shadow: 0 16px 50px rgba(0,0,0,.35);
+      --shadow2: 0 10px 24px rgba(0,0,0,.25);
+      --radius: 18px;
+      --radius2: 26px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(900px 500px at 18% 12%, rgba(124,92,255,.35), transparent 60%),
+        radial-gradient(800px 500px at 75% 18%, rgba(255,92,147,.25), transparent 60%),
+        radial-gradient(700px 460px at 65% 78%, rgba(34,197,94,.22), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
+    }
+
+    a{ color:inherit; }
+    a:hover{ opacity:.95; }
+
+    /* subtle floating blobs */
+    .blob{
+      position:absolute;
+      filter: blur(40px);
+      opacity:.35;
+      z-index:0;
+      pointer-events:none;
+      animation: floaty 12s ease-in-out infinite;
+    }
+    .blob.one{ width:320px; height:320px; left:-80px; top:260px; background: radial-gradient(circle at 30% 30%, rgba(124,92,255,.9), rgba(124,92,255,0)); }
+    .blob.two{ width:280px; height:280px; right:-90px; top:520px; background: radial-gradient(circle at 40% 40%, rgba(255,92,147,.9), rgba(255,92,147,0)); animation-delay:-4s; }
+    .blob.three{ width:340px; height:340px; right:8%; bottom:-120px; background: radial-gradient(circle at 40% 40%, rgba(34,197,94,.9), rgba(34,197,94,0)); animation-delay:-7s; }
+
+    @keyframes floaty{
+      0%,100%{ transform: translateY(0) translateX(0); }
+      50%{ transform: translateY(-18px) translateX(10px); }
+    }
+
+    .wrap{
+      position:relative;
+      z-index:1;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 18px 70px;
+    }
+
+    .card{
+      border:1px solid var(--line);
+      border-radius: var(--radius2);
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+    }
+
+    /* Top bar */
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding: 14px 16px;
+      border-radius: 999px;
+      box-shadow: var(--shadow2);
+    }
+    .brand{
+      display:flex; flex-direction:column;
+      gap:2px;
+      min-width: 240px;
+    }
+    .brand h1{
+      margin:0;
+      font-size: 14px;
+      letter-spacing:.2px;
+      line-height:1.15;
+      font-weight: 700;
+    }
+    .brand p{
+      margin:0;
+      font-size:12px;
+      color: var(--muted2);
+      line-height:1.25;
+    }
+
+    .pillrow{
+      display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;
+    }
+    .pill{
+      padding: 8px 10px;
+      border-radius: 999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+      font-size: 12px;
+      white-space:nowrap;
+    }
+    .pill strong{ color: var(--text); font-weight:600; }
+
+    /* Hero */
+    .hero{
+      margin-top: 18px;
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+    @media (max-width: 940px){
+      .hero{ grid-template-columns: 1fr; }
+      .brand{ min-width: unset; }
+    }
+
+    .hero-left{
+      padding: 22px 22px;
+      position:relative;
+      overflow:hidden;
+    }
+    .hero-left:before{
+      content:"";
+      position:absolute; inset:-1px;
+      background:
+        radial-gradient(420px 220px at 15% 20%, rgba(124,92,255,.25), transparent 60%),
+        radial-gradient(420px 220px at 80% 10%, rgba(255,92,147,.18), transparent 60%),
+        radial-gradient(420px 220px at 60% 90%, rgba(34,197,94,.18), transparent 60%);
+      pointer-events:none;
+    }
+    .hero-left > *{ position:relative; z-index:1; }
+
+    .kicker{
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    .kicker .dot{
+      width:10px; height:10px; border-radius:999px;
+      background: var(--accent2);
+      box-shadow: 0 0 0 4px rgba(34,197,94,.15);
+    }
+
+    .hero-left h2{
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.06;
+      letter-spacing: -.4px;
+    }
+    .hero-left h2 span{
+      background: linear-gradient(90deg, rgba(124,92,255,1), rgba(255,92,147,1));
+      -webkit-background-clip:text;
+      background-clip:text;
+      color: transparent;
+    }
+
+    .lede{
+      margin:0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+      max-width: 62ch;
+    }
+
+    .cta-row{
+      margin-top: 16px;
+      display:flex;
+      gap:10px;
+      flex-wrap: wrap;
+      align-items:center;
+    }
+    .btn{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-size: 13px;
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .15s ease, background .15s ease, border-color .15s ease;
+      text-decoration:none;
+    }
+    .btn:hover{ transform: translateY(-1px); border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); }
+    .btn.primary{
+      background: linear-gradient(135deg, rgba(124,92,255,.95), rgba(255,92,147,.95));
+      border-color: transparent;
+      box-shadow: 0 14px 30px rgba(124,92,255,.18);
+    }
+
+    .hero-right{
+      padding: 18px;
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+    }
+    .hero-illus{
+      border-radius: 22px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      padding: 14px;
+      display:grid;
+      place-items:center;
+      overflow:hidden;
+      min-height: 260px;
+    }
+    .hero-illus img{
+      width: 100%;
+      height: auto;
+      max-height: 330px;
+      object-fit: contain;
+      filter: drop-shadow(0 18px 25px rgba(0,0,0,.25));
+      transform: translateY(2px);
+      border-radius: 18px;
+    }
+
+    .mini-grid{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 520px){
+      .mini-grid{ grid-template-columns: 1fr; }
+    }
+    .mini{
+      padding: 12px 12px;
+      border-radius: 18px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      min-height: 74px;
+    }
+    .mini .t{ font-size:12px; color: var(--muted2); }
+    .mini .v{ font-size:14px; margin-top:6px; font-weight:600; }
+
+    /* Layout below */
+    .content{
+      margin-top: 18px;
+      display:grid;
+      grid-template-columns: 280px 1fr;
+      gap: 18px;
+      align-items:start;
+    }
+    @media (max-width: 940px){
+      .content{ grid-template-columns: 1fr; }
+    }
+
+    .toc{
+      position: sticky;
+      top: 16px;
+      padding: 14px;
+    }
+    @media (max-width: 940px){
+      .toc{ position:relative; top:auto; }
+    }
+    .toc h3{
+      margin: 4px 0 10px;
+      font-size: 12px;
+      color: var(--muted2);
+      letter-spacing:.14em;
+      text-transform: uppercase;
+    }
+    .toc a{
+      display:block;
+      padding: 10px 10px;
+      border-radius: 14px;
+      border:1px solid transparent;
+      color: var(--muted);
+      font-size: 13px;
+      text-decoration:none;
+    }
+    .toc a:hover{
+      background: rgba(255,255,255,.05);
+      border-color: rgba(255,255,255,.10);
+      color: var(--text);
+    }
+
+    .main{
+      padding: 20px;
+    }
+    .section{
+      margin: 0 0 18px;
+      padding: 18px;
+      border-radius: var(--radius2);
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+    }
+    .section h3{
+      margin: 0 0 10px;
+      font-size: 18px;
+      letter-spacing: -.2px;
+    }
+    .section p{
+      margin: 8px 0;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 14px;
+    }
+
+    .callout{
+      border-left: 4px solid rgba(124,92,255,.9);
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(124,92,255,.10);
+      border: 1px solid rgba(124,92,255,.22);
+      margin: 12px 0 0;
+    }
+    .callout strong{ color: var(--text); }
+    .callout p{ margin:0; color: var(--text); }
+
+    .hr{
+      height:1px; background: var(--line);
+      margin: 14px 0;
+    }
+
+    .list{
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height:1.7;
+      font-size:14px;
+    }
+
+    .math{
+      border-radius: 18px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.16);
+      padding: 10px 12px;
+      overflow:auto;
+      margin-top: 10px;
+    }
+
+    /* Examples */
+    .examples{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    @media (max-width: 940px){
+      .examples{ grid-template-columns: 1fr; }
+    }
+    .ex-card{
+      padding: 16px;
+      border-radius: 22px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.16);
+    }
+    .ex-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .ex-head h4{ margin:0; font-size: 16px; letter-spacing:-.2px; }
+    .tag{
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border:1px solid var(--line);
+      color: var(--muted);
+      background: rgba(255,255,255,.03);
+      white-space:nowrap;
+    }
+    .steps{
+      margin: 0;
+      padding-left: 16px;
+      color: var(--muted);
+      line-height:1.65;
+      font-size: 13px;
+    }
+    .steps code{
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      color: var(--text);
+    }
+
+    /* Calculator */
+    .calc{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    @media (max-width: 940px){
+      .calc{ grid-template-columns: 1fr; }
+    }
+    .panel{
+      padding: 16px;
+      border-radius: 22px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.16);
+    }
+    .panel h4{
+      margin:0 0 10px;
+      font-size: 16px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 520px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+    label{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      font-size: 12px;
+      color: var(--muted2);
+    }
+    input{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 10px 10px;
+      font-size: 13px;
+      outline:none;
+    }
+    input:focus{
+      border-color: rgba(124,92,255,.7);
+      box-shadow: 0 0 0 4px rgba(124,92,255,.18);
+    }
+
+    .out{
+      display:grid;
+      gap: 10px;
+    }
+    .metric{
+      padding: 12px 12px;
+      border-radius: 18px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      display:flex;
+      justify-content:space-between;
+      gap: 12px;
+      align-items:baseline;
+    }
+    .metric .k{ font-size:12px; color: var(--muted2); }
+    .metric .n{ font-size:14px; font-weight:700; }
+
+    .note{
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted2);
+      line-height:1.55;
+    }
+
+    footer{
+      margin-top: 18px;
+      padding: 14px 18px;
+      color: var(--muted2);
+      font-size: 12px;
+      text-align:center;
+      border-radius: var(--radius2);
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="blob one"></div>
+  <div class="blob two"></div>
+  <div class="blob three"></div>
+
+  <div class="wrap">
+    <div class="topbar card" role="banner">
+      <div class="brand">
+        <h1>Monthly ROI Allocation</h1>
+        <p>Day-weighted allocation for 90-day campaign bundles</p>
+      </div>
+
+      <div class="pillrow" aria-label="Quick context">
+        <div class="pill"><strong>Allocate by days</strong></div>
+        <div class="pill"><strong>Monthly “share”</strong></div>
+        <div class="pill"><strong>Interactive calc</strong></div>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div class="hero-left card">
+        <div class="kicker">
+          <span class="dot" aria-hidden="true"></span>
+          Think of it like a <strong>bundle</strong> → allocate the bundle into the month
+        </div>
+
+        <h2>
+          Turn a <span>90-day campaign cost</span> into a fair monthly ROI.
+        </h2>
+
+        <p class="lede">
+          A 90-day campaign is one spend that covers many days. If you want a monthly ROI,
+          assign the month its share of the spend (and optionally booked/showed) by
+          <strong>how many campaign days occur in that month</strong>.
+        </p>
+
+        <div class="cta-row">
+          <a class="btn primary" href="#calculator">Jump to calculator</a>
+          <a class="btn" href="#examples">See worked examples</a>
+        </div>
+
+        <div class="callout" style="margin-top:16px;">
+          <p><strong>The one idea:</strong> Allocated to month = (share of days in that month) × (90-day total)</p>
+        </div>
+      </div>
+
+      <div class="hero-right card">
+        <div class="hero-illus" aria-label="Illustration placeholder">
+          <!-- Replace the src with your uploaded image later (keep it relative for GitHub Pages) -->
+          <img
+            alt="Illustration"
+            src="https://github.com/NIVA-Health/NIVA-Health.github.io/blob/538e83b068d99aabdb6f5502b7dfc0cbfffc425a/infographic_char_1.png"
+          />
+        </div>
+
+        <div class="mini-grid">
+          <div class="mini">
+            <div class="t">Input</div>
+            <div class="v">90-day totals</div>
+          </div>
+          <div class="mini">
+            <div class="t">Logic</div>
+            <div class="v">Day share (d/D)</div>
+          </div>
+          <div class="mini">
+            <div class="t">Output</div>
+            <div class="v">Allocated ROI</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="content">
+      <nav class="toc card" aria-label="Table of contents">
+        <h3>On this page</h3>
+        <a href="#idea">The one idea</a>
+        <a href="#definitions">Definitions</a>
+        <a href="#formulas">Formulas</a>
+        <a href="#examples">Examples</a>
+        <a href="#plainwords">Plain words</a>
+        <a href="#calculator">Calculator</a>
+      </nav>
+
+      <main class="main card">
+        <article class="section" id="idea">
+          <h3>The one idea</h3>
+          <p><strong>Think of it like this:</strong> a 90-day campaign cost is a “bundle” that covers many days.</p>
+          <p>If you want a <em>monthly</em> ROI, you need to decide <strong>how much of that bundle belongs to that month</strong>.</p>
+
+          <div class="math">
+            $$\textbf{Allocated to month} = (\text{share of days in that month}) \times (\text{90-day total})$$
+          </div>
+        </article>
+
+        <article class="section" id="definitions">
+          <h3>Definitions</h3>
+
+          <ul class="list">
+            <li>Campaign window: <strong>start_date → end_date</strong></li>
+            <li>Window length (in days):</li>
+          </ul>
+
+          <div class="math">
+            $$D = \text{days from start to end (inclusive)}$$
+          </div>
+
+          <p>Pick a month (e.g., July):</p>
+          <ul class="list">
+            <li>Days of the campaign that happen in that month = $d$</li>
+          </ul>
+        </article>
+
+        <article class="section" id="formulas">
+          <h3>Formulas</h3>
+
+          <p><strong>Allocation fraction</strong></p>
+          <div class="math">$$f = \frac{d}{D}$$</div>
+
+          <div class="hr"></div>
+
+          <p><strong>Allocated monthly cost</strong></p>
+          <div class="math">$$\text{allocated cost} = \text{total campaign cost}\times f$$</div>
+
+          <p><strong>Allocated monthly booked & showed</strong> (same fraction)</p>
+          <div class="math">
+            $$\text{allocated booked} = \text{total booked}\times f$$
+            $$\text{allocated showed} = \text{total showed} \times f$$
+          </div>
+
+          <p><strong>Monthly ROI (using allocated cost)</strong></p>
+          <div class="math">
+            $$\text{ROI} = \frac{\text{cash sales month}-\text{allocated cost}}{\text{allocated cost}}$$
+          </div>
+        </article>
+
+        <article class="section" id="examples">
+          <h3>My examples, with real numbers</h3>
+
+          <div class="examples">
+            <div class="ex-card">
+              <div class="ex-head">
+                <h4>Window 1</h4>
+                <span class="tag">05/03/25 → 07/31/25</span>
+              </div>
+              <ul class="steps">
+                <li>Total campaign cost = <code>98,000</code></li>
+                <li>Cash sales month (July) = <code>210,000</code></li>
+                <li>Days in window: May 3–May 31 = <code>29</code>, June = <code>30</code>, July = <code>31</code> → <code>D = 90</code></li>
+                <li>Days in July: <code>d = 31</code> → <code>f = 31/90</code></li>
+                <li>Allocated cost: <code>98,000 × 31/90 = 33,755.56</code></li>
+                <li>ROI: <code>(210,000 − 33,755.56) / 33,755.56 ≈ 5.22</code> (≈ <code>522%</code>)</li>
+              </ul>
+              <div class="note">Tip: Use “Load Window 1” in the calculator to populate these values.</div>
+            </div>
+
+            <div class="ex-card">
+              <div class="ex-head">
+                <h4>Window 2</h4>
+                <span class="tag">05/30/25 → 08/27/25</span>
+              </div>
+              <ul class="steps">
+                <li>Total campaign cost = <code>78,000</code></li>
+                <li>Cash sales month (August) = <code>99,760</code></li>
+                <li>Days in window: May 30–31 = <code>2</code>, June = <code>30</code>, July = <code>31</code>, Aug 1–27 = <code>27</code> → <code>D = 90</code></li>
+                <li>Days in August: <code>d = 27</code> → <code>f = 27/90 = 0.3</code></li>
+                <li>Allocated cost: <code>78,000 × 0.3 = 23,400</code></li>
+                <li>ROI: <code>(99,760 − 23,400) / 23,400 ≈ 3.26</code> (≈ <code>326%</code>)</li>
+              </ul>
+              <div class="note">Optional: also allocate booked/showed with the same <code>f</code>.</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="section" id="plainwords">
+          <h3>Why we multiply by days (in plain words)</h3>
+
+          <p>Because your campaign cost covers <strong>90 days</strong>, but your cash sales is <strong>one month</strong>.</p>
+          <div class="callout">
+            <p>
+              “If the campaign ran across 90 days, and July is 31 of those days,
+              then about <strong>31/90</strong> of the cost belongs to July.”
+            </p>
+          </div>
+          <p>Same logic for Booked/Shown if you want “monthly equivalent booked/shown.”</p>
+        </article>
+
+        <article class="section" id="calculator">
+          <h3>Quick calculator</h3>
+
+          <p>Enter your campaign window + totals, pick the month you care about, and we’ll compute <code>D</code>, <code>d</code>, <code>f</code>, allocated cost, and ROI.</p>
+
+          <div class="calc">
+            <div class="panel">
+              <h4>Inputs</h4>
+
+              <div class="grid">
+                <label>
+                  Campaign start date
+                  <input id="startDate" type="date" value="2025-05-03" />
+                </label>
+                <label>
+                  Campaign end date
+                  <input id="endDate" type="date" value="2025-07-31" />
+                </label>
+
+                <label>
+                  Pick month
+                  <input id="monthPick" type="month" value="2025-07" />
+                </label>
+                <label>
+                  Cash sales (that month)
+                  <input id="cashSales" type="number" step="0.01" value="210000" />
+                </label>
+
+                <label>
+                  Total campaign cost (window)
+                  <input id="totalCost" type="number" step="0.01" value="98000" />
+                </label>
+                <label>
+                  Total booked (optional)
+                  <input id="totalBooked" type="number" step="0.01" value="" placeholder="optional" />
+                </label>
+
+                <label>
+                  Total showed (optional)
+                  <input id="totalShowed" type="number" step="0.01" value="" placeholder="optional" />
+                </label>
+              </div>
+
+              <div class="cta-row" style="margin-top:12px;">
+                <button class="btn primary" id="recalcBtn" type="button">Recalculate</button>
+                <button class="btn" id="loadEx1" type="button">Load Window 1</button>
+                <button class="btn" id="loadEx2" type="button">Load Window 2</button>
+              </div>
+
+              <div class="note">
+                Inclusive-day logic: if a campaign includes a day, that day counts (start and end are both included).
+              </div>
+            </div>
+
+            <div class="panel">
+              <h4>Outputs</h4>
+
+              <div class="out" id="out">
+                <div class="metric"><div class="k">Window length (D)</div><div class="n" id="outD">—</div></div>
+                <div class="metric"><div class="k">Days in month (d)</div><div class="n" id="outd">—</div></div>
+                <div class="metric"><div class="k">Fraction (f = d/D)</div><div class="n" id="outf">—</div></div>
+                <div class="metric"><div class="k">Allocated cost</div><div class="n" id="outAllocCost">—</div></div>
+                <div class="metric"><div class="k">Allocated booked (optional)</div><div class="n" id="outAllocBooked">—</div></div>
+                <div class="metric"><div class="k">Allocated showed (optional)</div><div class="n" id="outAllocShowed">—</div></div>
+                <div class="metric"><div class="k">ROI (ratio)</div><div class="n" id="outROI">—</div></div>
+                <div class="metric"><div class="k">ROI (%)</div><div class="n" id="outROIpct">—</div></div>
+              </div>
+
+              <div class="note" id="outNote"></div>
+            </div>
+          </div>
+        </article>
+
+        <footer>
+          Single-file HTML for GitHub Pages • Math via MathJax • Day-weighted allocation for monthly ROI
+        </footer>
+      </main>
+    </section>
+  </div>
+
+  <script>
+    // ---------- Utilities ----------
+    const $ = (id) => document.getElementById(id);
+
+    function parseDate(value){
+      // value expected "YYYY-MM-DD"
+      const [y,m,d] = value.split("-").map(Number);
+      return new Date(Date.UTC(y, m-1, d));
+    }
+
+    function formatNumber(n){
+      if (!isFinite(n)) return "—";
+      return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    }
+
+    function formatMoney(n){
+      if (!isFinite(n)) return "—";
+      return n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+    }
+
+    function formatPct(n){
+      if (!isFinite(n)) return "—";
+      return (n * 100).toLocaleString(undefined, { maximumFractionDigits: 2 }) + "%";
+    }
+
+    function daysInclusive(start, end){
+      // Both are Date objects in UTC
+      const ms = end.getTime() - start.getTime();
+      const days = Math.floor(ms / 86400000) + 1; // inclusive
+      return days;
+    }
+
+    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+    function monthBounds(ym){
+      // ym = "YYYY-MM"
+      const [y,m] = ym.split("-").map(Number);
+      const start = new Date(Date.UTC(y, m-1, 1));
+      const end = new Date(Date.UTC(y, m, 0)); // last day of month
+      return { start, end };
+    }
+
+    function overlapDaysInclusive(aStart, aEnd, bStart, bEnd){
+      const start = new Date(Math.max(aStart.getTime(), bStart.getTime()));
+      const end = new Date(Math.min(aEnd.getTime(), bEnd.getTime()));
+      if (end.getTime() < start.getTime()) return 0;
+      return daysInclusive(start, end);
+    }
+
+    // ---------- Calculator ----------
+    function recalc(){
+      const startVal = $("startDate").value;
+      const endVal   = $("endDate").value;
+      const monthVal = $("monthPick").value;
+
+      const totalCost = parseFloat($("totalCost").value || "0");
+      const cashSales = parseFloat($("cashSales").value || "0");
+
+      const totalBooked = parseFloat($("totalBooked").value || "NaN");
+      const totalShowed = parseFloat($("totalShowed").value || "NaN");
+
+      if (!startVal || !endVal || !monthVal){
+        $("outNote").textContent = "Please fill in start date, end date, and month.";
+        return;
+      }
+
+      const start = parseDate(startVal);
+      const end = parseDate(endVal);
+
+      if (end.getTime() < start.getTime()){
+        $("outNote").textContent = "End date must be on or after start date.";
+        ["outD","outd","outf","outAllocCost","outAllocBooked","outAllocShowed","outROI","outROIpct"].forEach(id => $(id).textContent = "—");
+        return;
+      }
+
+      const D = daysInclusive(start, end);
+
+      const mb = monthBounds(monthVal);
+      const d = overlapDaysInclusive(start, end, mb.start, mb.end);
+
+      const f = D > 0 ? (d / D) : NaN;
+
+      const allocCost = totalCost * f;
+
+      const allocBooked = isFinite(totalBooked) ? (totalBooked * f) : NaN;
+      const allocShowed = isFinite(totalShowed) ? (totalShowed * f) : NaN;
+
+      const roi = (allocCost !== 0) ? ((cashSales - allocCost) / allocCost) : NaN;
+
+      $("outD").textContent = formatNumber(D);
+      $("outd").textContent = formatNumber(d);
+      $("outf").textContent = isFinite(f) ? f.toLocaleString(undefined, { maximumFractionDigits: 6 }) : "—";
+      $("outAllocCost").textContent = formatMoney(allocCost);
+      $("outAllocBooked").textContent = isFinite(allocBooked) ? formatNumber(allocBooked) : "—";
+      $("outAllocShowed").textContent = isFinite(allocShowed) ? formatNumber(allocShowed) : "—";
+      $("outROI").textContent = isFinite(roi) ? roi.toLocaleString(undefined, { maximumFractionDigits: 6 }) : "—";
+      $("outROIpct").textContent = formatPct(roi);
+
+      const monthName = new Date(mb.start.getTime()).toLocaleString(undefined, { month: "long", year: "numeric" });
+      if (d === 0){
+        $("outNote").textContent = `No overlap: the campaign window has 0 days in ${monthName}. ROI will be undefined or not meaningful for that month.`;
+      } else {
+        $("outNote").textContent = `Computed allocation for ${monthName} using ${d} day(s) out of ${D} total day(s).`;
+      }
+    }
+
+    function loadWindow1(){
+      $("startDate").value = "2025-05-03";
+      $("endDate").value   = "2025-07-31";
+      $("monthPick").value = "2025-07";
+      $("totalCost").value = "98000";
+      $("cashSales").value = "210000";
+      $("totalBooked").value = "";
+      $("totalShowed").value = "";
+      recalc();
+      location.hash = "#calculator";
+    }
+
+    function loadWindow2(){
+      $("startDate").value = "2025-05-30";
+      $("endDate").value   = "2025-08-27";
+      $("monthPick").value = "2025-08";
+      $("totalCost").value = "78000";
+      $("cashSales").value = "99760";
+      $("totalBooked").value = "";
+      $("totalShowed").value = "";
+      recalc();
+      location.hash = "#calculator";
+    }
+
+    // Wire up
+    $("recalcBtn").addEventListener("click", recalc);
+    $("loadEx1").addEventListener("click", loadWindow1);
+    $("loadEx2").addEventListener("click", loadWindow2);
+
+    // Auto-recalc on input changes (lightweight + friendly)
+    ["startDate","endDate","monthPick","cashSales","totalCost","totalBooked","totalShowed"].forEach(id => {
+      $(id).addEventListener("input", () => recalc());
+    });
+
+    // Initial compute
+    recalc();
+  </script>
+</body>
+</html>
+```
